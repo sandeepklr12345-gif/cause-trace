@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: causetrace-db
+    environment:
+      POSTGRES_USER: causetrace
+      POSTGRES_PASSWORD: causetrace_dev
+      POSTGRES_DB: causetrace
+    ports:
+      - "5433:5432"
+    volumes:
+      - causetrace_pg:/var/lib/postgresql/data
+
+volumes:
+  causetrace_pg:

@@ -1,22 +1,27 @@
 import { useState } from 'react'
+import { Icon } from './icons'
 
-export function Card({ title, subtitle, right, children, flash, id }) {
+/** Section card. `icon` + `tone` render the pastel tile from the CauseTrace theme. */
+export function Card({ title, subtitle, right, children, flash, id, icon, tone = 'blue' }) {
   return (
     <section className={`card ${flash ? 'flash' : ''}`} id={id}>
       <header className="card-head">
-        <div>
-          <h3>{title}</h3>
-          {subtitle && <p className="muted small">{subtitle}</p>}
+        <div className="card-title">
+          {icon && <span className={`tile tile-${tone}`}><Icon name={icon} size={16} /></span>}
+          <div>
+            <h3>{title}</h3>
+            {subtitle && <p className="muted small">{subtitle}</p>}
+          </div>
         </div>
         {right}
       </header>
-      {children}
+      <div className="card-body">{children}</div>
     </section>
   )
 }
 
-export function Pill({ tone = 'neutral', children, title }) {
-  return <span className={`pill pill-${tone}`} title={title}>{children}</span>
+export function Pill({ tone = 'neutral', children, title, caps = false }) {
+  return <span className={`pill pill-${tone} ${caps ? 'caps' : ''}`} title={title}>{children}</span>
 }
 
 const SOURCE_LABEL = {

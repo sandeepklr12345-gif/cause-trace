@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { sendChat, uploadAndExtract } from '../store/chatSlice'
+import { Icon } from './icons'
 import { Pill } from './ui'
 
 const READINESS = {
@@ -11,18 +12,28 @@ const READINESS = {
 const ACTIONS = [
   ['analyze', 'Analyze root cause'],
   ['challenge', 'Challenge the reasoning'],
-  ['gaps', "What's missing?"],
+  ['gaps', 'What is missing?'],
   ['capa', 'Suggest CAPA'],
 ]
 const EXAMPLES = [
   'Atorvastatin API batch ATC260915A failed residual isopropanol at 5,800 ppm (limit 5,000) after tray drying in VTD-204.',
 ]
+const CAN_DO = [
+  ['doc', 'Reads PDF, email and text reports and fills the form'],
+  ['chat', 'Takes a plain-language description of the incident'],
+  ['layers', 'Investigates root cause and challenges the reasoning'],
+  ['search', 'Finds the missing evidence'],
+  ['shield', 'Recommends CAPA linked to each cause'],
+  ['info', 'Answers questions and applies your corrections'],
+]
 
 function HealthCard() {
   const h = useSelector((s) => s.investigation.data.health)
   const flash = useSelector((s) => s.investigation.flash.includes('health'))
+  const [open, setOpen] = useState(false)
   const warnings = h.warnings || []
   const [label, tone] = READINESS[h.readiness] || READINESS.not_ready
+  const hasDetail = !!h.summary || warnings.length > 0
   return (
     <div className={`health ${flash ? 'flash' : ''}`}>
       <div className="health-top">
@@ -30,11 +41,16 @@ function HealthCard() {
           <div className="eyebrow">Investigation health</div>
           <div className="score">{h.evidence_sufficiency}<small>%</small> <span className="muted small">evidence sufficiency</span></div>
         </div>
-        <Pill tone={tone}>{label}</Pill>
+        <Pill tone={tone} caps>{label}</Pill>
       </div>
       <div className="bar"><div className={`bar-fill bar-${tone}`} style={{ width: `${h.evidence_sufficiency}%` }} /></div>
-      {h.summary && <p className="small">{h.summary}</p>}
-      {warnings.length > 0 && (
+      {hasDetail && (
+        <button type="button" className="health-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'Hide details' : `Details${warnings.length ? ` · ${warnings.length} warning${warnings.length > 1 ? 's' : ''}` : ''}`}
+        </button>
+      )}
+      {open && h.summary && <p className="small body-text">{h.summary}</p>}
+      {open && warnings.length > 0 && (
         <ul className="warnings">{warnings.map((w, i) => <li key={i}>⚠ {w}</li>)}</ul>
       )}
     </div>
@@ -47,7 +63,9 @@ function Progress({ steps, phase }) {
       {phase && <div className="step active"><span className="spin" />{phase}</div>}
       {steps.map((s, i) => (
         <div key={i} className={`step ${i === steps.length - 1 ? 'active' : 'done'}`}>
-          {i === steps.length - 1 ? <span className="spin" /> : <span className="tick">✓</span>}
+          {i === steps.length - 1
+            ? <span className="spin" />
+            : <span className="check-dot"><Icon name="check" size={11} stroke={3.5} /></span>}
           {s.label}
         </div>
       ))}
@@ -62,8 +80,11 @@ export default function Copilot() {
   const [text, setText] = useState('')
   const [drag, setDrag] = useState(false)
   const fileRef = useRef(null)
-  const endRef = useRef(null)
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, progress, error])
+  const bodyRef = useRef(null)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [messages, progress, error])
 
   const working = busy || !!phase
   const submit = () => {
@@ -77,26 +98,44 @@ export default function Copilot() {
   return (
     <aside
       className={`copilot ${drag ? 'drag' : ''}`}
+      aria-label="AI copilot"
       onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
       onDragLeave={() => setDrag(false)}
       onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0]) }}
     >
       <header className="copilot-head">
-        <div>
-          <h2>CauseTrace Copilot</h2>
-          <p className="muted small">Describe the incident, drop a report (PDF / email / text), or correct a detail. The form fills itself.</p>
+        <div className="copilot-title">
+          <span className="ai-tile"><Icon name="sparkle" size={18} fill="currentColor" stroke={1.5} /></span>
+          <div>
+            <h2>AI copilot</h2>
+            <p className="muted small">Fills the form, answers questions</p>
+          </div>
         </div>
-        {llm && <Pill tone={llm === 'mock' ? 'amber' : 'green'} title={llm === 'mock' ? 'No Groq key: canned responses' : 'Groq model'}>{llm === 'mock' ? 'mock AI' : llm}</Pill>}
+        <div className="copilot-badges">
+          {llm && (
+            <Pill tone={llm === 'mock' ? 'amber' : 'green'} title={llm === 'mock' ? 'No Groq key: canned responses' : 'Groq model'}>
+              {llm === 'mock' ? 'mock AI' : llm}
+            </Pill>
+          )}
+          <span className="badge-ai">AI</span>
+        </div>
       </header>
 
-      <HealthCard />
+      <div className="copilot-health"><HealthCard /></div>
 
-      <div className="chat">
+      <div className="copilot-body" ref={bodyRef}>
         {messages.length === 0 && (
           <div className="empty-chat">
-            <p>Start with one of these:</p>
-            <button className="example" onClick={() => fileRef.current?.click()}>📎 Upload an incident report (PDF, .eml, .txt)</button>
-            {EXAMPLES.map((e) => <button key={e} className="example" onClick={() => setText(e)}>{e}</button>)}
+            <p className="empty-title">Start the investigation</p>
+            <button type="button" className="example" onClick={() => fileRef.current?.click()}>
+              <Icon name="clip" size={16} />Upload an incident report (PDF, .eml, .txt)
+            </button>
+            {EXAMPLES.map((e) => <button type="button" key={e} className="example" onClick={() => setText(e)}>{e}</button>)}
+            <ul className="can-do">
+              {CAN_DO.map(([icon, label]) => (
+                <li key={label}><span className="can-do-icon"><Icon name={icon} size={14} /></span>{label}</li>
+              ))}
+            </ul>
           </div>
         )}
         {messages.map((m, i) => (
@@ -106,28 +145,34 @@ export default function Copilot() {
           </div>
         ))}
         {working && <Progress steps={progress} phase={phase} />}
-        {error && <div className="msg msg-error">⚠ {error}</div>}
-        <div ref={endRef} />
+        {error && <div className="msg-error" role="alert"><Icon name="alert" size={16} />{error}</div>}
       </div>
 
-      <div className="quick">
-        {ACTIONS.map(([a, label]) => (
-          <button key={a} className="chip-btn" disabled={working}
-            onClick={() => dispatch(sendChat({ action: a, message: '', userText: label }))}>{label}</button>
-        ))}
-      </div>
-
-      <div className="composer">
-        <input ref={fileRef} type="file" hidden accept=".pdf,.txt,.eml,.md" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
-        <button className="icon-btn big" title="Upload incident document" disabled={working} onClick={() => fileRef.current?.click()}>📎</button>
-        <textarea
-          rows={2}
-          value={text}
-          placeholder="e.g. “Sorry, the batch number is X and the affected quantity is 50 kg”"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
-        />
-        <button className="btn primary" disabled={working || !text.trim()} onClick={submit}>Send</button>
+      <div className="copilot-foot">
+        <div className="quick">
+          {ACTIONS.map(([a, label]) => (
+            <button type="button" key={a} className="chip-btn" disabled={working}
+              onClick={() => dispatch(sendChat({ action: a, message: '', userText: label }))}>{label}</button>
+          ))}
+        </div>
+        <div className="composer">
+          <input ref={fileRef} type="file" hidden accept=".pdf,.txt,.eml,.md" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+          <button type="button" className="icon-btn" aria-label="Attach a document" title="Upload incident document (PDF, email, text)"
+            disabled={working} onClick={() => fileRef.current?.click()}>
+            <Icon name="clip" size={16} />
+          </button>
+          <textarea
+            rows={1}
+            value={text}
+            aria-label="Message the AI copilot"
+            placeholder="Describe the incident, or correct a detail…"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
+          />
+          <button type="button" className="icon-btn send" aria-label="Send" title="Send" disabled={working || !text.trim()} onClick={submit}>
+            <Icon name="send" size={16} />
+          </button>
+        </div>
       </div>
     </aside>
   )

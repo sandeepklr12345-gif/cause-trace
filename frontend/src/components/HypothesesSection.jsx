@@ -25,7 +25,7 @@ function Confirm({ hid }) {
   const id = useSelector((s) => s.investigation.id)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(() => { try { return localStorage.getItem(NAME_KEY) || '' } catch { return '' } })
-  if (!open) return <button className="btn small primary" onClick={() => setOpen(true)}>Confirm as root cause</button>
+  if (!open) return <button type="button" className="btn small primary" onClick={() => setOpen(true)}>Confirm as root cause</button>
   const go = () => {
     if (!name.trim()) return
     try { localStorage.setItem(NAME_KEY, name) } catch { /* storage unavailable */ }
@@ -34,8 +34,8 @@ function Confirm({ hid }) {
   return (
     <span className="confirm-inline">
       <input autoFocus placeholder="Your name & role (QA)" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()} />
-      <button className="btn small primary" onClick={go} disabled={!name.trim()}>Sign off</button>
-      <button className="btn small" onClick={() => setOpen(false)}>Cancel</button>
+      <button type="button" className="btn small primary" onClick={go} disabled={!name.trim()}>Sign off</button>
+      <button type="button" className="btn small" onClick={() => setOpen(false)}>Cancel</button>
     </span>
   )
 }
@@ -48,22 +48,23 @@ function Hyp({ h }) {
   return (
     <div className={`hyp hyp-${h.status} ${flash ? 'flash' : ''}`}>
       <div className="hyp-top">
-        <b>{h.id}</b>
-        <Pill tone="neutral">{h.category}</Pill>
-        <Pill tone={TONE[h.status]} title={h.status === 'confirmed' ? `Signed off by ${h.confirmed_by}` : 'Only a qualified person can confirm'}>
+        <div className="hyp-tags">
+          <span className="tag-id">{h.id} · {h.category}</span>
+          <span className="muted small">confidence: {h.confidence}</span>
+        </div>
+        <Pill tone={TONE[h.status]} caps title={h.status === 'confirmed' ? `Signed off by ${h.confirmed_by}` : 'Only a qualified person can confirm'}>
           {h.status === 'confirmed' ? `Confirmed · ${h.confirmed_by}` : h.status}
         </Pill>
-        <span className="muted small">confidence: {h.confidence}</span>
       </div>
       <EditableText value={h.statement} multiline className="hyp-statement"
         onSave={(v) => dispatch(runAction(() => api.editItem(id, 'hypotheses', h.id, { statement: v })))} />
-      {h.rationale && <p className="muted small">{h.rationale}</p>}
+      {h.rationale && <p className="body-text">{h.rationale}</p>}
       <EvidenceChips ids={h.evidence_for} evidence={evidence} kind="for" />
       <EvidenceChips ids={h.evidence_against} evidence={evidence} kind="against" />
       {h.status !== 'rejected' && h.status !== 'confirmed' && (
         <div className="row-actions">
+          <button type="button" className="btn small" onClick={() => dispatch(runAction(() => api.reject(id, h.id)))}>Reject</button>
           <Confirm hid={h.id} />
-          <button className="btn small" onClick={() => dispatch(runAction(() => api.reject(id, h.id)))}>Reject</button>
         </div>
       )}
       {h.status === 'suggested' && !h.evidence_for.length && (
@@ -76,7 +77,8 @@ function Hyp({ h }) {
 export default function HypothesesSection() {
   const hyps = useSelector((s) => s.investigation.data.hypotheses)
   return (
-    <Card title="4 · Root cause hypotheses" subtitle="AI proposes and links evidence. A person confirms.">
+    <Card id="sec-hypotheses" title="Root cause hypotheses and evidence" subtitle="AI proposes and links evidence. A person confirms."
+      icon="layers" tone="amber">
       {hyps.length === 0
         ? <p className="empty-note">No hypotheses yet.</p>
         : <div className="stack">{hyps.map((h) => <Hyp key={h.id} h={h} />)}</div>}

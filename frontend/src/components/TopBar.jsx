@@ -1,38 +1,41 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { api } from '../api'
-import { newInvestigation, openInvestigation, runAction, setError } from '../store/investigationSlice'
-import { Pill } from './ui'
+import { runAction, setError } from '../store/investigationSlice'
+import { Icon } from './icons'
 
 export default function TopBar() {
   const dispatch = useDispatch()
-  const { id, title, status, list, error, data } = useSelector((s) => s.investigation)
+  const { id, status, error, data } = useSelector((s) => s.investigation)
   const busy = useSelector((s) => s.chat.busy)
   const hasConfirmed = data?.hypotheses.some((h) => h.status === 'confirmed')
   return (
     <>
       <header className="topbar">
         <div className="brand">
-          <span className="logo">◎</span>
-          <div><b>CauseTrace</b><div className="muted small">AI root cause analysis · API manufacturing</div></div>
-        </div>
-        <div className="top-mid">
-          <select value={id || ''} onChange={(e) => dispatch(openInvestigation(Number(e.target.value)))} aria-label="Investigation">
-            {list.map((i) => <option key={i.id} value={i.id}>#{i.id} · {i.title}</option>)}
-          </select>
-          <button className="btn small" onClick={() => dispatch(newInvestigation())}>+ New</button>
-          <Pill tone={status === 'saved' ? 'green' : 'neutral'}>{status === 'saved' ? 'Saved' : 'Draft'}</Pill>
+          <span className="brand-tile"><Icon name="ring" size={20} /></span>
+          <div>
+            <div className="brand-name">CauseTrace</div>
+            <div className="brand-sub">AI root cause analysis · API manufacturing</div>
+          </div>
         </div>
         <div className="top-right">
-          <button className="btn" disabled={busy} onClick={() => dispatch(runAction(() => api.undo(id)))} title="Undo the last change (AI or manual)">↶ Undo</button>
-          <button className="btn primary" disabled={busy || !data?.deviation.description}
+          <span className="status-pill">{status === 'saved' ? 'Saved' : 'Draft'}</span>
+          <button type="button" className="btn dark" disabled={busy} onClick={() => dispatch(runAction(() => api.undo(id)))}
+            title="Undo the last change (AI or manual)">
+            <Icon name="undo" size={14} />Undo
+          </button>
+          <button type="button" className="btn primary" disabled={busy || !data?.deviation.description}
             title={hasConfirmed ? 'Save investigation' : 'A person must confirm a root cause before saving'}
-            onClick={() => dispatch(runAction(() => api.save(id)))}>Save investigation</button>
+            onClick={() => dispatch(runAction(() => api.save(id)))}>
+            <Icon name="check" size={14} stroke={2.2} />Save investigation
+          </button>
         </div>
       </header>
       {error && (
-        <div className="toast" role="alert" onClick={() => dispatch(setError(null))}>⚠ {error} <span className="muted small">(click to dismiss)</span></div>
+        <div className="toast" role="alert" onClick={() => dispatch(setError(null))}>
+          <Icon name="alert" size={16} />{error} <span className="small">(click to dismiss)</span>
+        </div>
       )}
-      <span hidden>{title}</span>
     </>
   )
 }

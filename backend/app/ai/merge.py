@@ -2,10 +2,10 @@
 guardrails on hypothesis status, and the (non-LLM) evidence-sufficiency score."""
 import json
 
-from ..schemas import Health, InvestigationData, Provenance
+from ..schemas import BatchContext, Deviation, Health, InvestigationData, Provenance
 
-DEVIATION_FIELDS = set(InvestigationData().deviation.model_fields)
-BATCH_FIELDS = set(InvestigationData().batch.model_fields)
+DEVIATION_FIELDS = set(Deviation.model_fields)
+BATCH_FIELDS = set(BatchContext.model_fields)
 
 
 def valid_path(path: str) -> bool:

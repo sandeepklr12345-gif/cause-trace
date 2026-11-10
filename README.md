@@ -15,13 +15,22 @@ docker compose up -d
 
 # 2. backend
 cd backend
-python -m venv .venv && .venv\Scripts\pip install fastapi "uvicorn[standard]" "sqlalchemy>=2" "psycopg[binary]" pydantic-settings python-multipart pdfplumber langgraph langchain-groq httpx reportlab
+python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
 copy .env.example .env      # then edit .env
 .venv\Scripts\python -m uvicorn app.main:app --port 8000
 
 # 3. frontend
 cd frontend && npm install && npm run dev      # http://localhost:5173
 ```
+
+## Tests and CI
+
+```bash
+cd backend && pip install -r requirements-dev.txt && pytest      # guardrail + schema tests
+cd frontend && npm run lint && npm run build
+```
+
+GitHub Actions runs both on every push and pull request (`.github/workflows/ci.yml`). The backend tests cover the rules that keep AI output safe: the model can never confirm a hypothesis, accepted values are not overwritten, unknown evidence ids are dropped, and the evidence score is computed in code.
 
 Real AI: in `backend/.env` set `GROQ_API_KEY=...` and `MOCK_LLM=false`.
 With no key (or `MOCK_LLM=true`) the backend runs in **mock mode** (canned, deterministic responses) so the UI and flow can be tested.
